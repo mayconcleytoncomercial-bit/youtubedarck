@@ -11,8 +11,8 @@ Segurança:
 Uso:
   export INFERENCE_API_KEY=...      # ou: belt login
   python3 scripts/processar_video.py \
-      --imagem /caminho/para/sua_imagem.jpg \
-      --roteiro /caminho/para/seu_roteiro.txt
+      --imagem inputs/avatar.jpg \
+      --roteiro inputs/roteiro.txt
 
 Saída obrigatória: output/videos/video_avatar_final.mp4 (relativo à raiz do repo).
 """
@@ -76,8 +76,8 @@ def procurar_url(obj) -> str | None:
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--imagem", default="/caminho/para/sua_imagem.jpg")
-    p.add_argument("--roteiro", default="/caminho/para/seu_roteiro.txt")
+    p.add_argument("--imagem", default=str(REPO_ROOT / "inputs" / "avatar.jpg"))
+    p.add_argument("--roteiro", default=str(REPO_ROOT / "inputs" / "roteiro.txt"))
     p.add_argument("--voz", default="pt-BR-Wavenet-C",
                    help="Nome Wavenet (mapeado) ou voz nativa do app, ex.: 'Kore (Female)'")
     p.add_argument("--resolucao", default="720p", choices=["720p", "1080p"])
