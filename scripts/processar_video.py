@@ -60,7 +60,7 @@ def belt(*args: str) -> str:
     proc = subprocess.run(["belt", "--no-input", *args], capture_output=True, text=True)
     if proc.returncode != 0:
         falhar(f"'belt {args[0]} {args[1] if len(args) > 1 else ''}' falhou:\n{proc.stderr.strip() or proc.stdout.strip()}")
-    return proc.stdout
+    return proc.stdout or proc.stderr  # algumas respostas (ex.: --estimate) saem no stderr
 
 
 def procurar_url(obj) -> str | None:
