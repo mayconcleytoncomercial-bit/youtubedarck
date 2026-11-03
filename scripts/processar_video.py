@@ -32,14 +32,19 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 PASTA_SAIDA = REPO_ROOT / "output" / "videos"
 NOME_FINAL = "video_avatar_final.mp4"
 
-# O app não tem vozes Google Wavenet. 'pt-BR-Wavenet-C' é uma voz feminina,
-# então mapeamos para a voz feminina equivalente do app + idioma PT-BR.
+# O app não tem vozes Google/Edge. Mapeamos cada nome para a voz equivalente
+# do app (mesmo gênero) e para o idioma correspondente.
 MAPA_VOZES = {
-    "pt-BR-Wavenet-A": "Kore (Female)",
-    "pt-BR-Wavenet-B": "Puck (Male)",
-    "pt-BR-Wavenet-C": "Kore (Female)",
+    "pt-BR-Wavenet-A": ("Kore (Female)", "Portuguese (Brazil)"),
+    "pt-BR-Wavenet-B": ("Puck (Male)", "Portuguese (Brazil)"),
+    "pt-BR-Wavenet-C": ("Kore (Female)", "Portuguese (Brazil)"),
+    # voz usada nos reels do "Recuerdos Dorados" (repo Metaads)
+    "es-MX-JorgeNeural": ("Charon (Male)", "Spanish"),
 }
-IDIOMA = "Portuguese (Brazil)"
+# Mesmo tom calmo dos reels: ritmo lento (~130 palavras/min) para público 50+.
+ESTILO_VOZ = {
+    "Spanish": "Voz cálida y nostálgica de un narrador latinoamericano, ritmo pausado y tranquilo.",
+}
 EXTENSOES_IMAGEM = {".jpg", ".jpeg", ".png", ".webp"}
 
 
@@ -79,7 +84,9 @@ def main() -> None:
     p.add_argument("--imagem", default=str(REPO_ROOT / "inputs" / "avatar.jpg"))
     p.add_argument("--roteiro", default=str(REPO_ROOT / "inputs" / "roteiro.txt"))
     p.add_argument("--voz", default="pt-BR-Wavenet-C",
-                   help="Nome Wavenet (mapeado) ou voz nativa do app, ex.: 'Kore (Female)'")
+                   help="Nome Wavenet/Edge (mapeado) ou voz nativa do app, ex.: 'Kore (Female)'")
+    p.add_argument("--idioma", help="Idioma do app, ex.: 'Spanish'. Padrão: o da voz escolhida")
+    p.add_argument("--nome", default=NOME_FINAL, help=f"Nome do arquivo final (padrão: {NOME_FINAL})")
     p.add_argument("--resolucao", default="720p", choices=["720p", "1080p"])
     p.add_argument("--estimar", action="store_true", help="Só mostra o custo previsto, sem gerar")
     a = p.parse_args()
@@ -96,10 +103,13 @@ def main() -> None:
     if not texto:
         falhar("o roteiro está vazio")
 
-    voz = MAPA_VOZES.get(a.voz, a.voz)
+    voz, idioma = MAPA_VOZES.get(a.voz, (a.voz, "Portuguese (Brazil)"))
+    idioma = a.idioma or idioma
+    if not a.nome.endswith(".mp4") or "/" in a.nome:
+        falhar("--nome deve ser só um nome de arquivo terminado em .mp4")
     print(f"Imagem : {imagem}")
-    print(f"Roteiro: {roteiro} ({len(texto)} caracteres)")
-    print(f"Voz    : {a.voz} -> {voz} / {IDIOMA}")
+    print(f"Roteiro: {roteiro} ({len(texto.split())} palavras, ~{len(texto.split()) / 130 * 60:.0f} s)")
+    print(f"Voz    : {a.voz} -> {voz} / {idioma}")
 
     # 2. Enviar a imagem para o inference.sh
     print("Enviando imagem...")
@@ -111,9 +121,11 @@ def main() -> None:
         "image": url_imagem,
         "voice_script": texto,
         "voice": voz,
-        "voice_language": IDIOMA,
+        "voice_language": idioma,
         "resolution": a.resolucao,
     }
+    if idioma in ESTILO_VOZ:
+        entrada["voice_prompt"] = ESTILO_VOZ[idioma]
 
     with tempfile.TemporaryDirectory() as tmp:
         arq_entrada = Path(tmp) / "input.json"
@@ -134,7 +146,7 @@ def main() -> None:
 
         # 4. Salvar no destino obrigatório
         PASTA_SAIDA.mkdir(parents=True, exist_ok=True)
-        destino = PASTA_SAIDA / NOME_FINAL
+        destino = PASTA_SAIDA / a.nome
         shutil.move(str(videos[0]), destino)
 
     # 5. Validação final
